@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NETCONF Simulator - Demo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { padding: 20px; }
+        .response-area { 
+            background-color: #f8f9fa; 
+            border: 1px solid #dee2e6; 
+            padding: 15px; 
+            font-family: monospace; 
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success { color: #198754; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center mb-4">NETCONF Protocol Simulator</h1>
+        
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5>Connect to Device</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <input type="text" class="form-control" id="hostname" placeholder="Host" value="192.168.1.1">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="number" class="form-control" id="port" placeholder="Port" value="830">
+                    </div>
+                    <div class="col-md-3">
+                        <input type="text" class="form-control" id="username" placeholder="Username" value="admin">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="password" class="form-control" id="password" placeholder="Password" value="admin">
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-success w-100" onclick="connect()">Connect</button>
+                    </div>
+                </div>
+                <div class="response-area mt-3" id="connect-response">Ready to connect...</div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5>Get Configuration</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <input type="text" class="form-control mb-2" id="session-id" placeholder="Session ID">
+                    </div>
+                    <div class="col-md-4">
+                        <select class="form-select mb-2" id="datastore">
+                            <option value="running">Running</option>
+                            <option value="candidate">Candidate</option>
+                            <option value="startup">Startup</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-primary w-100" onclick="getConfig()">Get Config</button>
+                    </div>
+                </div>
+                <div class="response-area mt-3" id="config-response">Ready to get configuration...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentSessionId = '';
+
+        async function connect() {
+            const data = {
+                host: document.getElementById('hostname').value,
+                port: parseInt(document.getElementById('port').value),
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value
+            };
+
+            try {
+                const response = await fetch('http://localhost:8081/api/netconf/connect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                currentSessionId = result.data.sessionId;
+                document.getElementById('session-id').value = currentSessionId;
+                document.getElementById('connect-response').innerHTML = 
+                    '<span class="success">✓ Connected successfully!</span>\n' +
+                    'Session ID: ' + currentSessionId + '\n' +
+                    'Host: ' + result.data.host + ':' + result.data.port;
+            } catch (error) {
+                document.getElementById('connect-response').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function getConfig() {
+            const data = {
+                sessionId: document.getElementById('session-id').value,
+                datastore: document.getElementById('datastore').value,
+                filter: null
+            };
+
+            try {
+                const response = await fetch('http://localhost:8081/api/netconf/get-config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                document.getElementById('config-response').innerHTML = 
+                    '<span class="success">✓ Configuration retrieved!</span>\n\n' + result.data;
+            } catch (error) {
+                document.getElementById('config-response').textContent = 'Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
